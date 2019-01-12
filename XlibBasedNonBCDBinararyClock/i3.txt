@@ -1,0 +1,17 @@
+Changes to make to i3. Specifically the file "i3bar/src/xcb.c"
+Add the following defines:
+
+#define START_BIN_CLOCK "binClock &"
+#define KILL_BIN_CLOCK "pkill -9 binClock"
+
+
+Add the following at the START of the function "void unhide_bars(void)":
+
+system(START_BIN_CLOCK);
+
+
+Add the following at the START of the function "void hide_bars(void)":
+
+system(KILL_BIN_BLOCK);
+
+
