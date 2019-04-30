@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <X11/Xlib.h>
 //#include <X11/Xutil.h>
+#include <cstdlib>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -19,16 +21,17 @@ struct context
   std::vector<XColor *> xColors {&cyan, &purple, &blue, &green, &yellow, &orange, &red, &darkRed};
   GC gc;
 };
-constexpr int winX {}, winY {19+550};//winY 2 + 15 (height of volume bar) + 2.
+
 constexpr unsigned int winWidth {91}, winBoarder_width {};
-constexpr int numBitsHour {5};/*Not all of the veriables on this line and the next two need to be global because they arn't used in more then*/
-constexpr int numBitsMinSec {6};/*one function. However since we are using some of them to calculate the window height and they are all*/
-constexpr int hGap {10}, vGap {10}, width {17}, height {17};/*constants it was deemed acceptible make them all global since they are all related.*/
+constexpr int numBitsHour {5}; // Not all of the variables on this line and the next two need to be global because they arn't used in more then.
+constexpr int numBitsMinSec {6}; // One function. However since we are using some of them to calculate the window height and they are all.
+constexpr int hGap {10}, vGap {10}, width {17}, height {17}; // Constants it was deemed acceptible make them all global since they are all related.
 constexpr int textHeight {10};
 
 
+bool getConfigurableParameters(const char * configPath, int & winX, int & winY);
 int calcWinHeight();
-void init(context & con, int & winHeight);
+bool init(const int winX, const int winY, const char * configPath, context & con, int & winHeight);
 inline void display(context & con, const time_t time, const int winHeight);
 inline void draw(context & con, const time_t time, const int winHeight);
 inline void extractField(std::stringstream & date, std::stringstream & dateTime, const bool isStart, int count, const bool divider);
@@ -40,58 +43,129 @@ inline void drawBits(context & con, const std::vector<bool> & bits, const int co
 
 int main()
 {
-  context con;
-  int winHeight {calcWinHeight()};  
-  init(con, winHeight);  
-  time_t currentTime;
-  while(true)
+  const char * homeDir {getenv("HOME")}; // Get home directory
+  std::stringstream configPath {};
+  configPath<<homeDir<<"/.config/binClock.conf";
+  int winX {}, winY {};
+  if(getConfigurableParameters(configPath.str().c_str(), winX, winY))
     {
-      time(&currentTime);//get current time
-      display(con, currentTime, winHeight);
-      std::this_thread::sleep_for(std::chrono::milliseconds(250));
+      context con;
+      int winHeight {calcWinHeight()};
+      if(init(winX, winY, configPath.str().c_str(), con, winHeight))
+	{
+	  time_t currentTime;
+	  while(true)
+	    {
+	      time(&currentTime);	// Get current time
+	      display(con, currentTime, winHeight);
+	      std::this_thread::sleep_for(std::chrono::milliseconds(250));
+	    }
+	}
+      XCloseDisplay(con.display);
     }
-  XCloseDisplay(con.display);
+  
   return 0;
 }
 
 
-int calcWinHeight()
+bool getConfigurableParameters(const char * configPath, int & winX, int & winY)
 {
-  return (vGap * (numBitsMinSec +1)) + (height * numBitsMinSec) + textHeight*2 + vGap*2; // textHeight and vGap are multiplied by two the same multiplication is done in xdraw string (pleas clean this up and make all the code nice :) .)
+  bool ret {false};
+  constexpr char spacer {':'}, endChar {';'};
+  char skip {}, end {};
+  std::ifstream in(configPath);
+  if(in.is_open())
+    {
+      ret = true;
+      in>>winX>>skip>>winY>>end;
+      in.close();
+      if(skip != spacer || end != endChar)
+	{
+	  std::cout<<"Error configuration file \""<<configPath<<"\" malformed!\nUsage:\tx:y; (where x & y are the coordinates of the top left corner"
+	    " of the window, '"<<spacer<<"' act's as the field seperator and the last field must be followed by '"<<endChar<<"'.\n";
+	  ret = false;
+	}
+    }
+  else
+    {
+      std::cout<<"Unable to open file \""<<configPath<<"\". $HOME environment variable may not be set or file may not exist!\n";
+    }  
+  return ret;
 }
 
 
-void init(context & con, int & winHeight)
+int calcWinHeight()
+{ // textHeight and vGap are multiplied by two the same multiplication is done in xdraw string (pleas clean this up and make all the code nice :) .)
+  return (vGap * (numBitsMinSec +1)) + (height * numBitsMinSec) + textHeight*2 + vGap*2;
+}
+
+
+
+/*
+  https://stackoverflow.com/questions/26017771/what-does-screen-number-and-display-number-mean-in-xlib
+  "Display" in xlib / x11 protocol terminology is one single connection between client and X server.
+
+  "Screen" is actual screen, but things get more complicated here. Each screen has its own root window ( and some more associated properties - 
+  physical width/heights, DPI etc ). Because every window on the screen is child of that root window, you can't just move window from one screen to
+  another (all child windows under X11 always clipped by parent). This is one of the reason multiple "screens" as in your question almost never used
+  - most people have multiple monitors configured to be part of one X11 screen using Xinerama/RANDR extensions
+  :(
+*/
+bool init(const int winX, const int winY, const char * configPath, context & con, int & winHeight)
 {
+  bool ret {false};
   con.display = XOpenDisplay(nullptr);
+  
   if(!con.display)
     {
       std::cerr<< "Cannot to open con.display.";
       exit(1);
     }
-  int s = DefaultScreen(con.display);
-  con.attribs.override_redirect = 1;//non bordered / decorated window.   
-  con.window = XCreateWindow( con.display, RootWindow(con.display, 0), winX, winY, winWidth, winHeight, winBoarder_width, CopyFromParent, CopyFromParent, CopyFromParent, CWOverrideRedirect, &con.attribs );
-  XSetWindowBackground( con.display, con.window, 0x1900ff ); //0x84ffdc cool color
-  XClearWindow( con.display, con.window );
-  XMapWindow( con.display, con.window );
+  
+  Screen * s = DefaultScreenOfDisplay(con.display);
 
-  XGCValues values;
-  con.cmap = DefaultColormap(con.display, s);
-  con.gc = XCreateGC(con.display, con.window, 0, &values);
-
-  std::vector<std::string> colors {"Cyan", "Purple", "Blue", "Green", "Yellow", "Orange", "Red", "Dark Red"};
-
-  Status rc;
-  for(int iter {}; iter < colors.size(); ++iter)
+  if(!(winX >= 0 && winX <= WidthOfScreen(s) - winWidth)) // To do subtract width of window from WidthOfScreen(s) (Also make sure that it should be >= and not >.)
     {
-      rc = XAllocNamedColor(con.display, con.cmap, colors[iter].c_str(), con.xColors[iter], con.xColors[iter]);
-      if(rc == 0)
+      std::cout<<"X ("<<winX<<") coordinate from configuration file \""<<configPath<<"\" out of range, where the allowable range is [0, "
+	       <<WidthOfScreen(s) - winWidth<<"]\n";
+    }
+  else
+    {
+      if(!(winY >= 0 && winY <= HeightOfScreen(s) - winHeight))
 	{
-	  std::cerr<<"XAllocNamedColor - failed to allocated '"<<colors[iter].c_str()<<"' color.\n";
-	  exit(1);
+	  std::cout<<"Y ("<<winY<<") coordinate from configuration file \""<<configPath<<"\" out of range, where the allowable range is [0, "<<
+	    HeightOfScreen(s) - winHeight<<"]\n";
+	}
+      else
+	{
+	  ret = true;
+	  con.attribs.override_redirect = 1;//non bordered / decorated window.   
+	  con.window = XCreateWindow( con.display, RootWindow(con.display, 0), winX, winY, winWidth, winHeight, winBoarder_width, CopyFromParent,
+				      CopyFromParent, CopyFromParent, CWOverrideRedirect, &con.attribs );
+  
+	  XSetWindowBackground( con.display, con.window, 0x1900ff ); //0x84ffdc cool color
+	  XClearWindow( con.display, con.window );
+	  XMapWindow( con.display, con.window );
+
+	  XGCValues values;
+	  con.cmap = DefaultColormap(con.display, DefaultScreen(con.display));
+	  con.gc = XCreateGC(con.display, con.window, 0, &values);
+
+	  std::vector<std::string> colors {"Cyan", "Purple", "Blue", "Green", "Yellow", "Orange", "Red", "Dark Red"};
+
+	  Status rc;
+	  for(int iter {}; iter < colors.size(); ++iter)
+	    {
+	      rc = XAllocNamedColor(con.display, con.cmap, colors[iter].c_str(), con.xColors[iter], con.xColors[iter]);
+	      if(rc == 0)
+		{
+		  std::cerr<<"XAllocNamedColor - failed to allocated '"<<colors[iter].c_str()<<"' color.\n";
+		  exit(1);
+		}
+	    }
 	}
     }
+  return ret;
 }
 
 
