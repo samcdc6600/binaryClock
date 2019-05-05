@@ -91,8 +91,6 @@ int main(int argc, char * argv[])
 	      constexpr int firstX {0}, firstY {1};
 	      constexpr int name {0};
 
-	      std::cout<<"hell ---------------------"<<std::endl;
-
 	      std::stringstream cmdStart {};
 	      cmdStart<<argv[name]<<' ';
 	      const std::string background {"&"};
@@ -189,7 +187,6 @@ bool getConfigurableParameters(const char * configPath, std::vector<int> & coord
 
 void mainLoop(const int winX, const int winY, const bool usingConfig, const char * configPath)
 {
-  std::cout<<"winX = "<<winX<<", winY = "<<winY<<std::endl;
   context con;
   int winHeight {calcWinHeight()};
   if(init(winX, winY, usingConfig, configPath, con, winHeight))
