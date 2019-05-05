@@ -29,9 +29,10 @@ constexpr int hGap {10}, vGap {10}, width {17}, height {17}; // Constants it was
 constexpr int textHeight {10};
 
 
-bool getConfigurableParameters(const char * configPath, int & winX, int & winY);
+bool getConfigurableParameters(const char * configPath, std::vector<int> & coords);
+void mainLoop(const int winX, const int winY, const bool usingConfig, const char * configPath);
 int calcWinHeight();
-bool init(const int winX, const int winY, const char * configPath, context & con, int & winHeight);
+bool init(const int winX, const int winY, const bool usingConfig, const char * configPath, context & con, int & winHeight);
 inline void display(context & con, const time_t time, const int winHeight);
 inline void draw(context & con, const time_t time, const int winHeight);
 inline void extractField(std::stringstream & date, std::stringstream & dateTime, const bool isStart, int count, const bool divider);
@@ -41,56 +42,167 @@ inline void getBits(const int numBits, const int number, std::vector<bool> & ret
 inline void drawBits(context & con, const std::vector<bool> & bits, const int column, const int winHeight);
 
 
-int main()
+/* FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! */
+/* Feature to add! have program take extra argument when it run's it's self so that it will give a correct error message for out of range coordinates (in init())*/
+/* Change string parsing for cliCoordX and cliCoordY so that no trailing characters are allowed after the numbers */
+/* Add colour adjustment feature */
+/* Add transperancy feature */
+/* FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! */
+int main(int argc, char * argv[])
 {
+  constexpr int cliCoordsArgcNum {3}; // Number of args passed when run with coordinates
+  constexpr int cliNoArgs {1};	  // Number of args when no auxiliary args have been passed to the program
+  //  bool coordsFromCli {false};	  // Did coordinates come from the CLI or configeration file?
   const char * homeDir {getenv("HOME")}; // Get home directory
   std::stringstream configPath {};
   configPath<<homeDir<<"/.config/binClock.conf";
-  int winX {}, winY {};
-  if(getConfigurableParameters(configPath.str().c_str(), winX, winY))
-    {
-      context con;
-      int winHeight {calcWinHeight()};
-      if(init(winX, winY, configPath.str().c_str(), con, winHeight))
+  bool usingConfig {false};
+  
+  if(argc == cliCoordsArgcNum)
+    { // Our coordinates are comming from argv (and their is only one pair)
+      constexpr int cliCoordX {1}, cliCoordY {2};
+      const std::string x {argv[cliCoordX]}, y {argv[cliCoordY]};
+
+      try
+	{			// Stoi may throw invalid_argument exception or out_of_range exception
+	  mainLoop(stoi(x), stoi(y), usingConfig, configPath.str().c_str());
+	}
+      catch(const std::invalid_argument & e)
 	{
-	  time_t currentTime;
-	  while(true)
+	  std::cerr<<"Error ("<<e.what()<<"): x and or y are not numbers!\nThe correct format is \""<<argv[0]<<" x y\" (where x & y are the "
+	    "coordinates of the top left corner of the window.)\n";
+	}
+      catch(const std::out_of_range & e)
+	{
+	  std::cerr<<"Error ("<<e.what()<<"): x and or y are out of range!\nThe correct format is \""<<argv[0]<<" x y\" (where x & y are the "
+	    "coordinates of the top left corner of the window and the ranges of x and y are both [0, "
+		   <<((long(2)<<((sizeof(int) * 8) -1)) /2) -1<<"].)\n";
+	}
+    }
+  else
+    {
+      if(argc == cliNoArgs)
+	{ // Our coordinates are comming from configPath (and their may be more then one pair!)
+	  std::vector<int> coords {};
+	  usingConfig = true;
+	  
+	  if(getConfigurableParameters(configPath.str().c_str(), coords))
 	    {
-	      time(&currentTime);	// Get current time
-	      display(con, currentTime, winHeight);
-	      std::this_thread::sleep_for(std::chrono::milliseconds(250));
+	      constexpr int firstX {0}, firstY {1};
+	      constexpr int name {0};
+
+	      std::cout<<"hell ---------------------"<<std::endl;
+
+	      std::stringstream cmdStart {};
+	      cmdStart<<argv[name]<<' ';
+	      const std::string background {"&"};
+	      
+	      for(int iter {firstY +1}; iter < coords.size() -1; iter += 2)
+		{		// Start clocks after first one specified in config file :)
+		  std::stringstream cmdFull {};
+		  cmdFull<<cmdStart.str()<<coords[iter]<<' '<<coords[iter +1]<<background;
+		  system(cmdFull.str().c_str());
+		}
+
+	      mainLoop(coords[firstX], coords[firstY], usingConfig, configPath.str().c_str()); // Start clock associated with this process
 	    }
 	}
-      XCloseDisplay(con.display);
+      else
+	{
+	  std::cerr<<"Usage (with arguments): \""<<argv[0]<<" x y\", where x & y are the coordinates of the top left corner of the window.\nIf "
+	    "no arguments are passed the x & y coordinates are read in from the configuration file \""<<configPath.str()<<"\" (note that you can "
+	    "specify multiple coordinates in the config file, in which case a new instance of the program will run (with the corresponding pair "
+	    "of coordinates passed to it as it's arguments) for every pair of coordinates after the first.\n";	    
+	}
     }
   
   return 0;
 }
 
 
-bool getConfigurableParameters(const char * configPath, int & winX, int & winY)
+bool getConfigurableParameters(const char * configPath, std::vector<int> & coords)
 {
-  bool ret {false};
-  constexpr char spacer {':'}, endChar {';'};
-  char skip {}, end {};
+  bool ret {true};
   std::ifstream in(configPath);
   if(in.is_open())
     {
-      ret = true;
-      in>>winX>>skip>>winY>>end;
-      in.close();
-      if(skip != spacer || end != endChar)
+      constexpr char subCoordSpacer {','}, interCoordSpacer {':'}, endChar {';'};
+      char skip {}, end {};
+      int x {}, y {};
+      bool more {true};
+      std::stringstream errorMsg {};
+      errorMsg<<"The configuration file \""<<configPath<<"\" is malformed!\nUsage:\t\"x1,y1:x2,y2: ... ;\".\nWhere x & y are the "
+		"coordinates of the top left corner of the window/s, '"<<subCoordSpacer<<"' act's as the sub-field seperator, '"<<interCoordSpacer
+		       <<"' acts as the inter-field seperator and the fact that there can be effectively any number of coordinates (but there must"
+		" be at least one) is denoted by the ellipsis after the second field (\"x2,y2\"). Finally the last field must be followed by '"
+		       <<endChar<<"'.\n";
+      
+      while(more)
 	{
-	  std::cout<<"Error configuration file \""<<configPath<<"\" malformed!\nUsage:\tx:y; (where x & y are the coordinates of the top left corner"
-	    " of the window, '"<<spacer<<"' act's as the field seperator and the last field must be followed by '"<<endChar<<"'.\n";
-	  ret = false;
+	  in>>x>>skip>>y>>end;
+	  coords.push_back(x);
+	  coords.push_back(y);
+	  
+	  if(skip != subCoordSpacer)
+	    {
+	      std::cerr<<"Error: integer or '"<<subCoordSpacer<<"' missing! "<<errorMsg.str();
+	      ret = false;
+	      more = false;
+	    }
+	  else
+	    {	  
+	      if(end != interCoordSpacer)
+		{			// We should be at the end and have an endChar
+		  if(end == endChar)
+		    {
+		      constexpr int minCoordsNum {2};
+		      if(coords.size() < minCoordsNum || coords.size() % 2 != 0)
+			{	/* I don't think this point will ever be reached. However I am not going to remove it right now. I plan on
+				   improving the code within this while loop in the future. */
+			  std::cerr<<"Error: number of coordinates read in less then "<<minCoordsNum<<" or not even! "<<errorMsg.str();
+			  ret = false;
+			}
+		      more = false;
+		    }
+		  else
+		    {
+		      std::cerr<<"Error: integer, '"<<subCoordSpacer<<"' or '"<<endChar<<"' expected! "<<errorMsg.str();
+		      ret = false;
+		      more = false;
+		    }
+		}
+	    }
+	  
+	  skip = 0, end = 0, x = 0, y = 0; // Reset in case there is not enough characters to read in on the next iteration
 	}
+
+      in.close();
     }
   else
     {
-      std::cout<<"Unable to open file \""<<configPath<<"\". $HOME environment variable may not be set or file may not exist!\n";
-    }  
+      std::cerr<<"Unable to open file \""<<configPath<<"\". $HOME environment variable may not be set or file may not exist!\n";
+    }
+  
   return ret;
+}
+
+
+void mainLoop(const int winX, const int winY, const bool usingConfig, const char * configPath)
+{
+  std::cout<<"winX = "<<winX<<", winY = "<<winY<<std::endl;
+  context con;
+  int winHeight {calcWinHeight()};
+  if(init(winX, winY, usingConfig, configPath, con, winHeight))
+    {
+      time_t currentTime;
+      while(true)
+	{
+	  time(&currentTime);	// Get current time
+	  display(con, currentTime, winHeight);
+	  std::this_thread::sleep_for(std::chrono::milliseconds(250));
+	}
+    }
+  XCloseDisplay(con.display);
 }
 
 
@@ -111,7 +223,7 @@ int calcWinHeight()
   - most people have multiple monitors configured to be part of one X11 screen using Xinerama/RANDR extensions
   :(
 */
-bool init(const int winX, const int winY, const char * configPath, context & con, int & winHeight)
+bool init(const int winX, const int winY, const bool usingConfig, const char * configPath, context & con, int & winHeight)
 {
   bool ret {false};
   con.display = XOpenDisplay(nullptr);
@@ -126,15 +238,20 @@ bool init(const int winX, const int winY, const char * configPath, context & con
 
   if(!(winX >= 0 && winX <= WidthOfScreen(s) - winWidth)) // To do subtract width of window from WidthOfScreen(s) (Also make sure that it should be >= and not >.)
     {
-      std::cout<<"X ("<<winX<<") coordinate from configuration file \""<<configPath<<"\" out of range, where the allowable range is [0, "
+      std::cerr<<"Error: supplied x ("<<winX<<") coordinate ";
+      if(usingConfig)
+	std::cerr<<"from configuration file \""<<configPath<<"\" ";
+      std::cerr<<"out of range, where the allowable range is [0, "
 	       <<WidthOfScreen(s) - winWidth<<"]\n";
     }
   else
     {
       if(!(winY >= 0 && winY <= HeightOfScreen(s) - winHeight))
 	{
-	  std::cout<<"Y ("<<winY<<") coordinate from configuration file \""<<configPath<<"\" out of range, where the allowable range is [0, "<<
-	    HeightOfScreen(s) - winHeight<<"]\n";
+	  std::cerr<<"Error: supplied y ("<<winY<<") coordinate";
+	  if(usingConfig)
+	    std::cerr<<" from configuration file \""<<configPath<<"\" ";
+	  std::cerr<<"out of range, where the allowable range is [0, "<< HeightOfScreen(s) - winHeight<<"]\n";
 	}
       else
 	{
