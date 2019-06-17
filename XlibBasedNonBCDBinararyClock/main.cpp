@@ -15,18 +15,19 @@
 
 
 bool getConfigurableParameters(const char * configPath, std::vector<int> & coords);
-void mainLoop(const int winX, const int winY, const bool usingConfig, const char * configPath);
+void mainLoop(const int winX, const int winY, Color & color, const bool usingConfig, const char * configPath);
 int calcWinHeight();
 bool init(const int winX, const int winY, const bool usingConfig, const char * configPath, context & con,
 	  int & winHeight);
-inline void display(context & con, const time_t time, const int winHeight);
-inline void draw(context & con, const time_t time, const int winHeight);
+inline void display(context & con, Color & color, const time_t time, const int winHeight);
+inline void draw(context & con, Color & color, const time_t time, const int winHeight);
 inline void extractField(std::stringstream & date, std::stringstream & dateTime, const bool isStart, int count,
 			 const bool divider);
 inline void extractTimeFields(const std::string time, int & hours, int & minutes, int & seconds);
 inline void strNumPosToInt(const std::string & time, int & number, const int magnitude, const int iter);
 inline void getBits(const int numBits, const int number, std::vector<bool> & ret);
-inline void drawBits(context & con, const std::vector<bool> & bits, const int column, const int winHeight);
+inline void drawBits(context & con, Color & color, const std::vector<bool> & bits, const int column,
+		     const int winHeight);
 
 
 /* FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! */
@@ -53,12 +54,30 @@ int main(int argc, char * argv[])
   
   if(argc == cliCoordsArgcNum)
     { // Our coordinates are comming from argv (and their is only one pair)
-      constexpr int cliCoordX {1}, cliCoordY {2};
-      const std::string x {argv[cliCoordX]}, y {argv[cliCoordY]};
+      constexpr int cliCoordXIndex {1}, cliCoordYIndex {2},  cliAlphaIndex {3},
+    cliBackgroundRedIndex {4},		cliBackgroundGreenIndex {5},	cliBackgroundBlueIndex {6},
+    cliTextRedIndex {7},		cliTextGreenIndex {8},		cliTextBlueIndex {9},
+    cliPositiveBitRedIndex {10},	cliPositiveBitGreenIndex {11},	cliPositiveBitBlueIndex {12},
+    cliNegativeBitRedIndex {13},	cliNegativeBitGreenIndex {14},	cliNegativeBitBlueIndex {15};
+      const std::string x {argv[cliCoordXIndex]}, y {argv[cliCoordYIndex]};
 
       try
 	{			// Stoi may throw invalid_argument exception or out_of_range exception
-	  mainLoop(stoi(x), stoi(y), usingConfig, configPath.str().c_str());
+	  Color color(stoi(std::string(argv[cliAlphaIndex])),
+		      stoi(std::string(argv[cliBackgroundRedIndex])),
+		      stoi(std::string(argv[cliBackgroundGreenIndex])),
+		      stoi(std::string(argv[cliBackgroundBlueIndex])),
+		      stoi(std::string(argv[cliTextRedIndex])),
+		      stoi(std::string(argv[cliTextGreenIndex])),
+		      stoi(std::string(argv[cliTextBlueIndex])),
+		      stoi(std::string(argv[cliPositiveBitRedIndex])),
+		      stoi(std::string(argv[cliPositiveBitGreenIndex])),
+		      stoi(std::string(argv[cliPositiveBitBlueIndex])),
+		      stoi(std::string(argv[cliNegativeBitRedIndex])),
+		      stoi(std::string(argv[cliNegativeBitGreenIndex])),
+		      stoi(std::string(argv[cliNegativeBitBlueIndex])));
+	  color.init();
+	  mainLoop(stoi(x), stoi(y), color, usingConfig, configPath.str().c_str());
 	}
       catch(const std::invalid_argument & e)
 	{
@@ -95,7 +114,7 @@ int main(int argc, char * argv[])
 		  system(cmdFull.str().c_str());
 		}
 	      // Start clock associated with this process
-	      mainLoop(coords[firstX], coords[firstY], usingConfig, configPath.str().c_str());
+	      //	      mainLoop(coords[firstX], coords[firstY], usingConfig, configPath.str().c_str());
 	    }
 	}
       else
@@ -182,7 +201,7 @@ bool getConfigurableParameters(const char * configPath, std::vector<int> & coord
 }
 
 
-void mainLoop(const int winX, const int winY, const bool usingConfig, const char * configPath)
+void mainLoop(const int winX, const int winY, Color & color, const bool usingConfig, const char * configPath)
 {
   context con;
   int winHeight {calcWinHeight()};
@@ -192,7 +211,7 @@ void mainLoop(const int winX, const int winY, const bool usingConfig, const char
       while(true)
 	{
 	  time(&currentTime);	// Get current time
-	  display(con, currentTime, winHeight);
+	  display(con, color, currentTime, winHeight);
 	  std::this_thread::sleep_for(std::chrono::milliseconds(250));
 	}
     }
@@ -286,14 +305,14 @@ bool init(const int winX, const int winY, const bool usingConfig, const char * c
 }
 
 
-inline void display(context & con, const time_t time, const int winHeight)
+inline void display(context & con, Color & color, const time_t time, const int winHeight)
 {
-  draw(con, time, winHeight);
+  draw(con, color, time, winHeight);
   XFlush(con.display); //force x to flush it's buffers after we draw
 }
 
 
-inline void draw(context & con, const time_t time, const int winHeight)
+inline void draw(context & con, Color & color, const time_t time, const int winHeight)
 {
   using namespace tunables;
   using namespace time_constants;
@@ -308,14 +327,14 @@ inline void draw(context & con, const time_t time, const int winHeight)
   extractTimeFields(sSTime.str(), hours, minutes, seconds);
   std::vector<bool> bits;
   getBits(numBitsHour, hours, bits);
-  drawBits(con, bits, 0, winHeight);//draw hour bit's in column 0
+  drawBits(con, color, bits, 0, winHeight);//draw hour bit's in column 0
   bits.clear();
   getBits(numBitsMinSec, minutes, bits);
-  drawBits(con, bits, 1, winHeight);//draw minutes bit's in column 1
+  drawBits(con, color, bits, 1, winHeight);//draw minutes bit's in column 1
   bits.clear();
   getBits(numBitsMinSec, seconds, bits);
-  drawBits(con, bits, 2, winHeight);//draw seconds bit's in column 2
-  XSetForeground(con.display, con.gc, con.cyan.pixel);//set forground colour
+  drawBits(con, color, bits, 2, winHeight);//draw seconds bit's in column 2
+  color.setText(con.display, con.gc);
   XDrawString(con.display, con.window, con.gc, hGap , textHeight + vGap, dateStart.str().c_str(),
 	      dateStart.str().size());
   XDrawString(con.display, con.window, con.gc, hGap, textHeight*2 + vGap*2, dateEnd.str().c_str(),
@@ -371,18 +390,19 @@ inline void getBits(const int numBits, const int number, std::vector<bool> & ret
 }
 
 
-inline void drawBits(context & con, const std::vector<bool> & bits, const int column, const int winHeight)
+inline void drawBits(context & con, Color & color, const std::vector<bool> & bits, const int column,
+		     const int winHeight)
 {
   using namespace tunables;
   for(unsigned long rowIter {bits.size()}; rowIter > 0; --rowIter)
     {
-      XSetForeground(con.display, con.gc, con.darkRed.pixel);
+      color.setPositiveBit(con.display, con.gc);
       if(bits[rowIter-1])
 	XFillRectangle(con.display, con.window, con.gc, (hGap*(column+1)) + (width*column), winHeight -
 		       ((vGap*rowIter) + (height*rowIter)), width, height);
       else
 	{
-	  XSetForeground(con.display, con.gc, con.cyan.pixel);
+	  color.setNegativeBit(con.display, con.gc);
 	  XFillRectangle(con.display, con.window, con.gc, (hGap*(column+1)) + (width*column), winHeight -
 			 ((vGap*rowIter) + (height*rowIter)), width, height);
 	}

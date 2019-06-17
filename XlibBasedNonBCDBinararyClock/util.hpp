@@ -56,7 +56,7 @@ public:
     negativeBitRed {},  negativeBitGreen {},    negativeBitBlue {};
 
 private:
-  void checkRangeBg(const unsigned short c) const
+  unsigned short checkRangeBg(const unsigned short c) const
   {
     if(c < backgroundColorRangeMin || c > backgroundColorRangeMax)
       {
@@ -64,17 +64,37 @@ private:
 	  "is out of range! Where range is ["<<backgroundColorRangeMin<<","<<backgroundColorRangeMax<<"].\n";
 	exit(error_values::COLOR_RANGE);
       }
+    return c;
   }
 
-  void checkRange(const unsigned short c) const
+  unsigned short checkRange(const unsigned short c) const
   {
     if(c < colorRangeMin || c > colorRangeMax)
       {
 	std::cerr<<"Error: in checkRange - called from Color(), supplied color value ("<<c<<") is out of range! Where"
-	  " range is ["<<backgroundColorRangeMin<<","<<backgroundColorRangeMax<<"].\n";
+	  " range is ["<<colorRangeMin<<","<<colorRangeMax<<"].\n";
 	exit(error_values::COLOR_RANGE);
       }
+    return c;
   }
+
+public:
+  Color(const unsigned short a,
+        const unsigned short bGR,       const unsigned short bGG,       const unsigned short bGB,
+        const unsigned short tR,        const unsigned short tG,        const unsigned short tB,
+        const unsigned short pBR,       const unsigned short pBG,       const unsigned short pBB,
+        const unsigned short nBR,       const unsigned short nBG,       const unsigned short nBB) :
+    // alpha byte (msb) + red byte  + green byte + blue byte = 4 bytes
+    backgroundColor ((checkRangeBg(a)	+ backgroundCompSize * 3) +
+		     (checkRangeBg(bGR)	+ backgroundCompSize * 2) +
+		     (checkRangeBg(bGG)	+ backgroundCompSize * 1) +
+		     (checkRangeBg(bGB)	+ backgroundCompSize * 0)),
+    alpha (a),
+    backgroundRed (checkRangeBg(bGR)),	backgroundGreen (checkRangeBg(bGG)),	backgroundBlue (checkRangeBg(bGB)),
+    textRed (checkRange(tR)),		textGreen (checkRange(tG)),		textBlue (checkRange(tB)),
+    positiveBitRed (checkRange(pBR)),	positiveBitGreen (checkRange(pBG)),	positiveBitBlue (checkRange(pBB)),
+    negativeBitRed (checkRange(nBR)),	negativeBitGreen (checkRange(nBG)),	negativeBitBlue (checkRange(nBB))
+  {}
 
   void init()
   { /* We don't do this in the constructor because this class is somtimes just used to store the integer values and
@@ -103,24 +123,6 @@ private:
   {
     XSetForeground(display, gc, negativeBit.pixel);
   }
-
-public:
-  Color(const unsigned short a,
-        const unsigned short bGR,       const unsigned short bGG,       const unsigned short bGB,
-        const unsigned short tR,        const unsigned short tG,        const unsigned short tB,
-        const unsigned short pBR,       const unsigned short pBG,       const unsigned short pBB,
-        const unsigned short nBR,       const unsigned short nBG,       const unsigned short nBB) :
-    // alpha byte (msb) + red byte  + green byte + blue byte = 4 bytes
-    backgroundColor ((a + backgroundCompSize * 3) +
-		     (bGR + backgroundCompSize * 2) +
-		     (bGG + backgroundCompSize * 1) +
-		     (bGB + backgroundCompSize * 0)),
-    alpha (a),
-    backgroundRed (bGR),        backgroundGreen (bGG),  backgroundBlue (bGB),
-    textRed (tR),               textGreen (tG),         textBlue (tB),
-    positiveBitRed (pBR),       positiveBitGreen (pBG), positiveBitBlue (pBB),
-    negativeBitRed (nBR),       negativeBitGreen (nBG), negativeBitBlue (nBB)
-  {}
 };
 
 
