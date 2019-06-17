@@ -66,8 +66,8 @@ int main(int argc, char* argv[])
     XSetWindowAttributes attr;
     attr.colormap = XCreateColormap(display, DefaultRootWindow(display), vinfo.visual, AllocNone);
     //    attr.border_pixel = 0;
-    unsigned char r {0x10}, g {0x00}, b {0x09};
-    unsigned char alpha {0x60};
+    unsigned char r {0xff}, g {0x00}, b {0x09};
+    unsigned char alpha {0xff};
     //    int alphaDiv {256};
     unsigned int bgColor {};
     //    r *= alpha;
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
     // The red green and blue members of XColor are of type unsigned short, scaled from 0 to 65535 inclusive.
     XColor color;
     XAllocColor(display, cmap, &color);
-    color.red = 65535; color.green = 0; color.blue = 0, color.alpha = 70;
+    color.red = 65535; color.green = 0; color.blue = 0;
 
 
     XSetForeground(display, gc, color.pixel);

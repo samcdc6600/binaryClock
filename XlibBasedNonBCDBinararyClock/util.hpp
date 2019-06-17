@@ -2,6 +2,13 @@
 #define UTIL_HPP_
 
 
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <iostream>
+// TMP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#include <bitset>
+// TMP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 namespace time_constants
 {
   constexpr int numBitsHour {5};
@@ -30,11 +37,10 @@ namespace tunables
 struct context
 {
   Display *display = NULL;
+  XVisualInfo vinfo;
   Window window;
   XSetWindowAttributes attribs;
   Colormap cmap;
-  XColor cyan, purple, blue, green, yellow, orange, red, darkRed;
-  std::vector<XColor *> xColors {&cyan, &purple, &blue, &green, &yellow, &orange, &red, &darkRed};
   GC gc;
 };
 
@@ -85,10 +91,10 @@ public:
         const unsigned short pBR,       const unsigned short pBG,       const unsigned short pBB,
         const unsigned short nBR,       const unsigned short nBG,       const unsigned short nBB) :
     // alpha byte (msb) + red byte  + green byte + blue byte = 4 bytes
-    backgroundColor ((checkRangeBg(a)	+ backgroundCompSize * 3) +
-		     (checkRangeBg(bGR)	+ backgroundCompSize * 2) +
-		     (checkRangeBg(bGG)	+ backgroundCompSize * 1) +
-		     (checkRangeBg(bGB)	+ backgroundCompSize * 0)),
+    backgroundColor ((checkRangeBg(a)<<backgroundCompSize<<backgroundCompSize<<backgroundCompSize) +
+		     (checkRangeBg(bGR)<<backgroundCompSize<<backgroundCompSize) +
+		     (checkRangeBg(bGG)<<backgroundCompSize) +
+		     (checkRangeBg(bGB))),
     alpha (a),
     backgroundRed (checkRangeBg(bGR)),	backgroundGreen (checkRangeBg(bGG)),	backgroundBlue (checkRangeBg(bGB)),
     textRed (checkRange(tR)),		textGreen (checkRange(tG)),		textBlue (checkRange(tB)),
@@ -96,17 +102,21 @@ public:
     negativeBitRed (checkRange(nBR)),	negativeBitGreen (checkRange(nBG)),	negativeBitBlue (checkRange(nBB))
   {}
 
-  void init()
+  /*  void init(Display *display = NULL, Colormap cmap)
   { /* We don't do this in the constructor because this class is somtimes just used to store the integer values and
        not for setting the actual color. */
-    text.red = backgroundRed;		text.green = backgroundGreen;		text.blue = backgroundBlue;
+  /*    text.red = backgroundRed;		text.green = backgroundGreen;		text.blue = backgroundBlue;
     positiveBit.red = positiveBitRed;	positiveBit.green = positiveBitGreen;	positiveBit.blue = positiveBitBlue;
     negativeBit.red = negativeBitRed;	negativeBit.green = negativeBitGreen;	negativeBit.blue = negativeBitBlue;
-  }
+    XAllocColor(display, cmap, & text);
+    XAllocColor(display, cmap, & positiveBit);
+    XAllocColor(display, cmap, & negativeBit);
+    }*/
 
   void setBackground(XSetWindowAttributes attr) const
   {
     attr.background_pixel = backgroundColor;
+    std::cout<<"backgroundColor = "<<std::bitset<32>(backgroundColor)<<std::endl;
   }
 
   void setText(Display * display, const GC gc) const

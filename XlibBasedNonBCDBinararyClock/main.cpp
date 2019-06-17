@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <X11/Xlib.h>
-//#include <X11/Xutil.h>
 #include <cstdlib>
 #include <fstream>
 #include <string>
@@ -17,8 +16,8 @@
 bool getConfigurableParameters(const char * configPath, std::vector<int> & coords);
 void mainLoop(const int winX, const int winY, Color & color, const bool usingConfig, const char * configPath);
 int calcWinHeight();
-bool init(const int winX, const int winY, const bool usingConfig, const char * configPath, context & con,
-	  int & winHeight);
+bool init(const int winX, const int winY, Color & color,  const bool usingConfig, const char * configPath,
+	  context & con, int & winHeight);
 inline void display(context & con, Color & color, const time_t time, const int winHeight);
 inline void draw(context & con, Color & color, const time_t time, const int winHeight);
 inline void extractField(std::stringstream & date, std::stringstream & dateTime, const bool isStart, int count,
@@ -76,7 +75,7 @@ int main(int argc, char * argv[])
 		      stoi(std::string(argv[cliNegativeBitRedIndex])),
 		      stoi(std::string(argv[cliNegativeBitGreenIndex])),
 		      stoi(std::string(argv[cliNegativeBitBlueIndex])));
-	  color.init();
+	  //	  color.init(con.display, con.cmap);
 	  mainLoop(stoi(x), stoi(y), color, usingConfig, configPath.str().c_str());
 	}
       catch(const std::invalid_argument & e)
@@ -100,7 +99,7 @@ int main(int argc, char * argv[])
 	  
 	  if(getConfigurableParameters(configPath.str().c_str(), coords))
 	    {
-	      constexpr int firstX {0}, firstY {1};
+	      constexpr int firstY {1};
 	      constexpr int name {0};
 
 	      std::stringstream cmdStart {};
@@ -205,7 +204,7 @@ void mainLoop(const int winX, const int winY, Color & color, const bool usingCon
 {
   context con;
   int winHeight {calcWinHeight()};
-  if(init(winX, winY, usingConfig, configPath, con, winHeight))
+  if(init(winX, winY, color, usingConfig, configPath, con, winHeight))
     {
       time_t currentTime;
       while(true)
@@ -238,18 +237,20 @@ int calcWinHeight()
   parent). This is one of the reason multiple "screens" as in your question almost never used - most people have
   multiple monitors configured to be part of one X11 screen using Xinerama/RANDR extensions
 */
-bool init(const int winX, const int winY, const bool usingConfig, const char * configPath, context & con,
-	  int & winHeight)
+bool init(const int winX, const int winY, Color & color,  const bool usingConfig, const char * configPath,
+	  context & con, int & winHeight)
 {
   using namespace tunables;
   bool ret {false};
-  con.display = XOpenDisplay(nullptr);
-  
+  con.display = XOpenDisplay(nullptr);  
   if(!con.display)
     {
       std::cerr<< "Cannot to open con.display.";
       exit(error_values::XLIB_INIT);
     }
+
+  XMatchVisualInfo(con.display, DefaultScreen(con.display), 32, TrueColor, &con.vinfo);
+  con.attribs.colormap = XCreateColormap(con.display, DefaultRootWindow(con.display), con.vinfo.visual, AllocNone);
   
   Screen * s = DefaultScreenOfDisplay(con.display);
   // To do subtract width of window from WidthOfScreen(s) (Also make sure that it should be >= and not >.)
@@ -273,32 +274,19 @@ bool init(const int winX, const int winY, const bool usingConfig, const char * c
       else
 	{
 	  ret = true;
-	  con.attribs.override_redirect = 1;//non bordered / decorated window.   
-	  con.window = XCreateWindow( con.display, RootWindow(con.display, 0), winX, winY, winWidth, winHeight,
-				      winBoarder_width, CopyFromParent, CopyFromParent, CopyFromParent,
-				      CWOverrideRedirect, &con.attribs );
-  
-	  XSetWindowBackground( con.display, con.window, 0x1900ff ); //0x84ffdc cool color
-	  XClearWindow( con.display, con.window );
-	  XMapWindow( con.display, con.window );
+
+	  color.setBackground(con.attribs);
+	  con.attribs.override_redirect = 1;//non bordered / decorated window.
+	  con.window = XCreateWindow(con.display, RootWindow(con.display, 0), winX, winY, winWidth, winHeight,
+				      winBoarder_width, con.vinfo.depth, InputOutput, con.vinfo.visual,
+				      CWColormap | CWBorderPixel | CWBackPixel | CWOverrideRedirect, &con.attribs);
+	  
+	  //XClearWindow(con.display, con.window);
+	  XMapWindow(con.display, con.window);
 
 	  XGCValues values;
-	  con.cmap = DefaultColormap(con.display, DefaultScreen(con.display));
 	  con.gc = XCreateGC(con.display, con.window, 0, &values);
-
-	  std::vector<std::string> colors {"Cyan", "Purple", "Blue", "Green", "Yellow", "Orange", "Red", "Dark Red"};
-
-	  Status rc;
-	  for(int iter {}; iter < colors.size(); ++iter)
-	    {
-	      rc = XAllocNamedColor(con.display, con.cmap, colors[iter].c_str(), con.xColors[iter],
-				    con.xColors[iter]);
-	      if(rc == 0)
-		{
-		  std::cerr<<"XAllocNamedColor - failed to allocated '"<<colors[iter].c_str()<<"' color.\n";
-		  exit(error_values::XLIB_INIT);
-		}
-	    }
+	  con.cmap = DefaultColormap(con.display, DefaultScreen(con.display));
 	}
     }
   return ret;
@@ -307,7 +295,7 @@ bool init(const int winX, const int winY, const bool usingConfig, const char * c
 
 inline void display(context & con, Color & color, const time_t time, const int winHeight)
 {
-  draw(con, color, time, winHeight);
+  //  draw(con, color, time, winHeight);
   XFlush(con.display); //force x to flush it's buffers after we draw
 }
 
