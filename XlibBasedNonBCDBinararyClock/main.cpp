@@ -213,7 +213,7 @@ void mainLoop(const int winX, const int winY, Color & color, const bool usingCon
 	  display(con, color, currentTime, winHeight);
 	  std::this_thread::sleep_for(std::chrono::milliseconds(250));
 	}
-    }
+    }	  
   XCloseDisplay(con.display);
 }
 
@@ -274,8 +274,7 @@ bool init(const int winX, const int winY, Color & color,  const bool usingConfig
       else
 	{
 	  ret = true;
-
-	  color.setBackground(con.attribs);
+	  
 	  con.attribs.override_redirect = 1;//non bordered / decorated window.
 	  con.window = XCreateWindow(con.display, RootWindow(con.display, 0), winX, winY, winWidth, winHeight,
 				      winBoarder_width, con.vinfo.depth, InputOutput, con.vinfo.visual,
@@ -287,6 +286,8 @@ bool init(const int winX, const int winY, Color & color,  const bool usingConfig
 	  XGCValues values;
 	  con.gc = XCreateGC(con.display, con.window, 0, &values);
 	  con.cmap = DefaultColormap(con.display, DefaultScreen(con.display));
+
+	  color.init(con.display, con.cmap, con.attribs);
 	}
     }
   return ret;
@@ -295,7 +296,7 @@ bool init(const int winX, const int winY, Color & color,  const bool usingConfig
 
 inline void display(context & con, Color & color, const time_t time, const int winHeight)
 {
-  //  draw(con, color, time, winHeight);
+  draw(con, color, time, winHeight);
   XFlush(con.display); //force x to flush it's buffers after we draw
 }
 
@@ -326,7 +327,7 @@ inline void draw(context & con, Color & color, const time_t time, const int winH
   XDrawString(con.display, con.window, con.gc, hGap , textHeight + vGap, dateStart.str().c_str(),
 	      dateStart.str().size());
   XDrawString(con.display, con.window, con.gc, hGap, textHeight*2 + vGap*2, dateEnd.str().c_str(),
-	      dateEnd.str().size());
+  dateEnd.str().size());
 }
 
     
