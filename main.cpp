@@ -14,10 +14,10 @@
 
 
 bool getConfigurableParameters(const char * configPath, std::vector<int> & coords);
-void mainLoop(const int winX, const int winY, Color & color, const bool usingConfig, const char * configPath);
 int calcWinHeight();
 bool init(const int winX, const int winY, Color & color,  const bool usingConfig, const char * configPath,
-	  context & con, int & winHeight);
+	  context & con, const int & winHeight);
+void mainLoop(Color & color, const bool usingConfig, const char * configPath, context & con, const int winHeight);
 inline void display(context & con, Color & color, const time_t time, const int winHeight);
 inline void draw(context & con, Color & color, const time_t time, const int winHeight);
 inline void extractField(std::stringstream & date, std::stringstream & dateTime, const bool isStart, int count,
@@ -51,46 +51,7 @@ int main(int argc, char * argv[])
   configPath<<homeDir<<"/.config/binClock.conf";
   bool usingConfig {false};
   
-  if(argc == cliCoordsArgcNum)
-    { // Our coordinates are comming from argv (and their is only one pair)
-      constexpr int cliCoordXIndex {1}, cliCoordYIndex {2},  cliAlphaIndex {3},
-    cliBackgroundRedIndex {4},		cliBackgroundGreenIndex {5},	cliBackgroundBlueIndex {6},
-    cliTextRedIndex {7},		cliTextGreenIndex {8},		cliTextBlueIndex {9},
-    cliPositiveBitRedIndex {10},	cliPositiveBitGreenIndex {11},	cliPositiveBitBlueIndex {12},
-    cliNegativeBitRedIndex {13},	cliNegativeBitGreenIndex {14},	cliNegativeBitBlueIndex {15};
-      const std::string x {argv[cliCoordXIndex]}, y {argv[cliCoordYIndex]};
-
-      try
-	{			// Stoi may throw invalid_argument exception or out_of_range exception
-	  Color color(stoi(std::string(argv[cliAlphaIndex])),
-		      stoi(std::string(argv[cliBackgroundRedIndex])),
-		      stoi(std::string(argv[cliBackgroundGreenIndex])),
-		      stoi(std::string(argv[cliBackgroundBlueIndex])),
-		      stoi(std::string(argv[cliTextRedIndex])),
-		      stoi(std::string(argv[cliTextGreenIndex])),
-		      stoi(std::string(argv[cliTextBlueIndex])),
-		      stoi(std::string(argv[cliPositiveBitRedIndex])),
-		      stoi(std::string(argv[cliPositiveBitGreenIndex])),
-		      stoi(std::string(argv[cliPositiveBitBlueIndex])),
-		      stoi(std::string(argv[cliNegativeBitRedIndex])),
-		      stoi(std::string(argv[cliNegativeBitGreenIndex])),
-		      stoi(std::string(argv[cliNegativeBitBlueIndex])));
-	  //	  color.init(con.display, con.cmap);
-	  mainLoop(stoi(x), stoi(y), color, usingConfig, configPath.str().c_str());
-	}
-      catch(const std::invalid_argument & e)
-	{
-	  std::cerr<<"Error ("<<e.what()<<"): x and or y are not numbers!\nThe correct format is \""<<argv[0]<<" x y"
-	    "\" (where x & y are the coordinates of the top left corner of the window.)\n";
-	}
-      catch(const std::out_of_range & e)
-	{
-	  std::cerr<<"Error ("<<e.what()<<"): x and or y are out of range!\nThe correct format is \""<<argv[0]<<" x y"
-	    "\" (where x & y are the coordinates of the top left corner of the window and the ranges of x and y are "
-	    "both [0, "<<((long(2)<<((sizeof(int) * 8) -1)) /2) -1<<"].)\n";
-	}
-    }
-  else
+  if(argc != cliCoordsArgcNum)
     {
       if(argc == cliNoArgs)
 	{ // Our coordinates are comming from configPath (and their may be more then one pair!)
@@ -122,10 +83,56 @@ int main(int argc, char * argv[])
 	    "corner of the window.\nIf no arguments are passed the x & y coordinates are read in from the "
 	    "configuration file \""<<configPath.str()<<"\" (note that you can specify multiple coordinates in the "
 	    "config file, in which case a new instance of the program will run (with the corresponding pair of "
-	    "coordinates passed to it as it's arguments) for every pair of coordinates after the first.\n";	    
+	    "coordinates passed to it as it's arguments) for every pair of coordinates after the first.\n";
+
+	  return 0;
 	}
     }
-  
+  // Our coordinates are comming from argv (and their is only one pair)
+  constexpr int cliCoordXIndex {1}, cliCoordYIndex {2},  cliAlphaIndex {3},
+    cliBackgroundRedIndex {4},		cliBackgroundGreenIndex {5},	cliBackgroundBlueIndex {6},
+    cliTextRedIndex {7},		cliTextGreenIndex {8},		cliTextBlueIndex {9},
+    cliPositiveBitRedIndex {10},	cliPositiveBitGreenIndex {11},	cliPositiveBitBlueIndex {12},
+    cliNegativeBitRedIndex {13},	cliNegativeBitGreenIndex {14},	cliNegativeBitBlueIndex {15};
+      const std::string x {argv[cliCoordXIndex]}, y {argv[cliCoordYIndex]};
+
+      try
+	{		// Stoi may throw invalid_argument exception or out_of_range exception
+	  Color color(stoi(std::string(argv[cliAlphaIndex])),
+		      stoi(std::string(argv[cliBackgroundRedIndex])),
+		      stoi(std::string(argv[cliBackgroundGreenIndex])),
+		      stoi(std::string(argv[cliBackgroundBlueIndex])),
+		      stoi(std::string(argv[cliTextRedIndex])),
+		      stoi(std::string(argv[cliTextGreenIndex])),
+		      stoi(std::string(argv[cliTextBlueIndex])),
+		      stoi(std::string(argv[cliPositiveBitRedIndex])),
+		      stoi(std::string(argv[cliPositiveBitGreenIndex])),
+		      stoi(std::string(argv[cliPositiveBitBlueIndex])),
+		      stoi(std::string(argv[cliNegativeBitRedIndex])),
+		      stoi(std::string(argv[cliNegativeBitGreenIndex])),
+		      stoi(std::string(argv[cliNegativeBitBlueIndex])));
+	  
+	  context con;
+	  int winHeight {calcWinHeight()};
+
+	  if(init(stoi(x), stoi(y), color, usingConfig, configPath.str().c_str(), con, winHeight))
+	    {
+	      mainLoop(color, usingConfig, configPath.str().c_str(), con, winHeight);
+	    }	  
+	  XCloseDisplay(con.display);
+	}
+      catch(const std::invalid_argument & e)
+	{
+	  std::cerr<<"Error ("<<e.what()<<"): x and or y are not numbers!\nThe correct format is \""<<argv[0]<<" x y"
+	    "\" (where x & y are the coordinates of the top left corner of the window.)\n";
+	}
+      catch(const std::out_of_range & e)
+	{
+	  std::cerr<<"Error ("<<e.what()<<"): x and or y are out of range!\nThe correct format is \""<<argv[0]<<" x y"
+	    "\" (where x & y are the coordinates of the top left corner of the window and the ranges of x and y are "
+	    "both [0, "<<((long(2)<<((sizeof(int) * 8) -1)) /2) -1<<"].)\n";
+	}
+
   return 0;
 }
 
@@ -200,9 +207,9 @@ bool getConfigurableParameters(const char * configPath, std::vector<int> & coord
 }
 
 
-void mainLoop(const int winX, const int winY, Color & color, const bool usingConfig, const char * configPath)
+void mainLoop(Color & color, const bool usingConfig, const char * configPath, context & con, const int winHeight)
 {
-  context con;
+  /*  context con;
   int winHeight {calcWinHeight()};
   if(init(winX, winY, color, usingConfig, configPath, con, winHeight))
     {
@@ -214,7 +221,15 @@ void mainLoop(const int winX, const int winY, Color & color, const bool usingCon
 	  std::this_thread::sleep_for(std::chrono::milliseconds(250));
 	}
     }	  
-  XCloseDisplay(con.display);
+    XCloseDisplay(con.display);*/
+  std::cout<<con.attribs.background_pixel<<std::endl;
+  time_t currentTime;
+  while(true)
+    {
+      time(&currentTime);	// Get current time
+      display(con, color, currentTime, winHeight);
+      std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    }
 }
 
 
@@ -238,7 +253,7 @@ int calcWinHeight()
   multiple monitors configured to be part of one X11 screen using Xinerama/RANDR extensions
 */
 bool init(const int winX, const int winY, Color & color,  const bool usingConfig, const char * configPath,
-	  context & con, int & winHeight)
+	  context & con, const int & winHeight)
 {
   using namespace tunables;
   bool ret {false};

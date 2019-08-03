@@ -114,7 +114,7 @@ public:
     XAllocColor(display, cmap, & negativeBit);
   }
   // Move this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-private:
+  //private:
   void setBackground(XSetWindowAttributes attr) const
   {
     attr.background_pixel = backgroundColor;
