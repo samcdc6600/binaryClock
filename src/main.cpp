@@ -15,7 +15,7 @@
 
 bool getConfigurableParameters(const char * configPath, std::vector<int> & coords);
 int calcWinHeight();
-bool init(const int winX, const int winY, Color & color,  const bool usingConfig, const char * configPath,
+bool init(const int winX, const int winY, Color & color, const bool usingConfig, const char * configPath,
 	  context & con, const int & winHeight);
 void mainLoop(Color & color, const bool usingConfig, const char * configPath, context & con, const int winHeight);
 inline void display(context & con, Color & color, const time_t time, const int winHeight);
@@ -67,7 +67,7 @@ int main(int argc, char * argv[])
 	      cmdStart<<argv[name]<<' ';
 	      const std::string background {"&"};
 	      
-	      for(int iter {firstY +1}; iter < coords.size() -1; iter += 2)
+	      for(size_t iter {firstY +1}; iter < coords.size() -1; iter += 2)
 		{		// Start clocks after first one specified in config file :)
 		  std::stringstream cmdFull {};
 		  cmdFull<<cmdStart.str()<<coords[iter]<<' '<<coords[iter +1]<<background;
@@ -270,7 +270,7 @@ bool init(const int winX, const int winY, Color & color,  const bool usingConfig
   
   Screen * s = DefaultScreenOfDisplay(con.display);
   // To do subtract width of window from WidthOfScreen(s) (Also make sure that it should be >= and not >.)
-  if(!(winX >= 0 && winX <= WidthOfScreen(s) - winWidth))
+  if(!(winX >= 0 && size_t(winX) <= WidthOfScreen(s) - winWidth))
     {
       std::cerr<<"Error: supplied x ("<<winX<<") coordinate ";
       if(usingConfig)
@@ -299,11 +299,32 @@ bool init(const int winX, const int winY, Color & color,  const bool usingConfig
 	  //XClearWindow(con.display, con.window);
 	  XMapWindow(con.display, con.window);
 
-	  XGCValues values;
-	  con.gc = XCreateGC(con.display, con.window, 0, &values);
+	  //	XGCValues values;
+	  //	con.gc = XCreateGC(con.display, con.window, 0, &values);
+	  con.gc = XCreateGC(con.display, con.window, 0, 0);
 	  con.cmap = DefaultColormap(con.display, DefaultScreen(con.display));
 
 	  color.init(con.display, con.cmap, con.attribs);
+
+	  /*
+	      unsigned char r {0xff}, g {0x00}, b {0x09};
+	      unsigned int bgColor {};
+	      unsigned char alpha {0xff};
+ bgColor = alpha;
+    std::cout<<"    bgColor = alpha; = "<<std::bitset<32>(bgColor)<<std::endl;
+    bgColor<<=8;
+    std::cout<<"    bgColor<<=2; = "<<std::bitset<32>(bgColor)<<std::endl;
+    bgColor += r;
+    std::cout<<"    bgColor += r; = "<<std::bitset<32>(bgColor)<<std::endl;
+    bgColor<<=8;
+    std::cout<<"    bgColor<<=2; = "<<std::bitset<32>(bgColor)<<std::endl;
+    bgColor += g;
+    std::cout<<"    bgColor += g; = "<<std::bitset<32>(bgColor)<<std::endl;
+    bgColor<<=8;
+    std::cout<<"    bgColor<<=2; = "<<std::bitset<32>(bgColor)<<std::endl;
+    bgColor += b;
+    std::cout<<"    bgColor += b; = "<<std::bitset<32>(bgColor)<<std::endl;
+    con.attribs.background_pixel = bgColor;*/
 	}
     }
   return ret;
@@ -369,7 +390,7 @@ inline void extractField(std::stringstream & date, std::stringstream & dateTime,
 
 inline void extractTimeFields(const std::string time, int & hours, int & minutes, int & seconds)
 {
-  int iter {};
+  size_t iter {};
   for(int magnitude {1}; time[iter] != ':' && time[iter] != '\0' && iter < time.size(); ++iter, magnitude *= 10)
     strNumPosToInt(time, hours, magnitude, iter);
   iter++;

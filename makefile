@@ -5,10 +5,8 @@ LIBS  = -lX11 -L/usr/local/lib/ -I/usr/local/include/
 SRC   = ./src
 IDIR  = $(SRC)/include
 ODIR  = ./obj
-
 _DEPS = util.hpp
 DEPS  = $(patsubst %,$(IDIR)/%,$(_DEPS))
-
 _OBJ  = main.o
 OBJ   = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
