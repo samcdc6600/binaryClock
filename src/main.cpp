@@ -117,6 +117,7 @@ int main(int argc, char * argv[])
 
 	  if(init(stoi(x), stoi(y), color, usingConfig, configPath.str().c_str(), con, winHeight))
 	    {
+	      std::cout<<"We have initialised !\n";
 	      mainLoop(color, usingConfig, configPath.str().c_str(), con, winHeight);
 	    }	  
 	  XCloseDisplay(con.display);
