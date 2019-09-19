@@ -179,6 +179,7 @@ bool getConfigurableParameters(const char * configPath, std::vector<int> & coord
   else
     {
       std::cerr<<"Unable to open file \""<<configPath<<"\". $HOME environment variable may not be set or file may not exist!\n";
+      ret = false;
     }
   
   return ret;
