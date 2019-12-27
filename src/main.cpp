@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
   constexpr int cliAlphaIndex {3};
   constexpr int cliBackgroundRedIndex {4}, cliBackgroundGreenIndex {5}, cliBackgroundBlueIndex {6};
   constexpr int cliTextRedIndex {7}, cliTextGreenIndex {8}, cliTextBlueIndex {9};
-  constexpr int cliPositiveBitRedIndex {10}, cliPositiveBitGreenIndex {11}, cliPositiveBitBlueIndex {12}
+  constexpr int cliPositiveBitRedIndex {10}, cliPositiveBitGreenIndex {11}, cliPositiveBitBlueIndex {12};
   constexpr int cliNegativeBitRedIndex {13}, cliNegativeBitGreenIndex {14}, cliNegativeBitBlueIndex {15};
   const std::string x {argv[cliCoordXIndex]}, y {argv[cliCoordYIndex]};
 
