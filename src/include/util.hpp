@@ -112,10 +112,17 @@ public:
     negativeBitGreen (checkRange(nBG)),	negativeBitBlue (checkRange(nBB))
   {}
 
-  void init(Display * display, Colormap cmap, XSetWindowAttributes attr)
+  // Initbackground() should be called before XCreateWindow().
+  void initBackground(XSetWindowAttributes * attr) const
+  {
+    attr->background_pixel = backgroundColor;
+    std::cout<<"backgroundColor = "<<std::bitset<32>(backgroundColor)<<std::endl;
+  }
+
+  // Init() should be called after XCreateWindow().
+  void init(Display * display, Colormap cmap)//, XSetWindowAttributes attr)
   { /* We don't do this in the constructor because this class is somtimes just
        used to store the integer values and not for setting the actual color. */
-    setBackground(attr);
     text.red = textRed;		text.green = textGreen;
     text.blue = textBlue;
     positiveBit.red = positiveBitRed;	positiveBit.green = positiveBitGreen;
@@ -126,16 +133,7 @@ public:
     XAllocColor(display, cmap, & positiveBit);
     XAllocColor(display, cmap, & negativeBit);
   }
-  // Move this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  //private:
-  void setBackground(XSetWindowAttributes attr) const
-  {
-    attr.background_pixel = backgroundColor;
-    std::cout<<"backgroundColor = "<<std::bitset<32>(backgroundColor)<<std::endl;
-  }
   
-public:				// Delete this after moving!!!!!!!!!!!!!!!!!
-  // Move this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   void setText(Display * display, const GC gc) const
   {
     XSetForeground(display, gc, text.pixel);

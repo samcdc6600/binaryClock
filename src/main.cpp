@@ -340,24 +340,34 @@ bool init(const int winX, const int winY, Color & color,
       else
 	{
 	  ret = true;
+
+	  //con.attribs.background_pixel = 0xffff0000;
+	  color.initBackground(&con.attribs);
 	  
 	  con.attribs.override_redirect = 1;//non bordered / decorated window.
+	  /*	  con.window = XCreateWindow(con.display, RootWindow(con.display, 0),
+				     winX, winY, winWidth, winHeight,
+				     winBoarder_width, con.vinfo.depth,
+				     InputOutput, con.vinfo.visual, CWColormap
+				     | CWBorderPixel | CWBackPixel |
+				     CWOverrideRedirect, &con.attribs);*/
 	  con.window = XCreateWindow(con.display, RootWindow(con.display, 0),
 				     winX, winY, winWidth, winHeight,
 				     winBoarder_width, con.vinfo.depth,
 				     InputOutput, con.vinfo.visual, CWColormap
 				     | CWBorderPixel | CWBackPixel |
 				     CWOverrideRedirect, &con.attribs);
-	  
+
+	  con.gc = XCreateGC(con.display, con.window, 0, 0);
 	  //XClearWindow(con.display, con.window);
 	  XMapWindow(con.display, con.window);
 
 	  //	XGCValues values;
 	  //	con.gc = XCreateGC(con.display, con.window, 0, &values);
-	  con.gc = XCreateGC(con.display, con.window, 0, 0);
+	  
 	  con.cmap = DefaultColormap(con.display, DefaultScreen(con.display));
 
-	  color.init(con.display, con.cmap, con.attribs);
+	  color.init(con.display, con.cmap);//, con.attribs);
 
 	  /*
 	    unsigned char r {0xff}, g {0x00}, b {0x09};
