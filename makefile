@@ -1,4 +1,5 @@
-CXX   = clang++
+#CXX   = clang++
+CXX	= g++
 BIN_NAME = binclk
 CXXFLAGS = -std=c++1z -Wall -Wpedantic -Wextra -O3
 LIBS  = -lX11 -L/usr/local/lib/ -I/usr/local/include/
