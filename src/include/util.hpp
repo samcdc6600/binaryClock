@@ -5,9 +5,6 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <iostream>
-// TMP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#include <bitset>
-// TMP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 namespace time_constants
 {
@@ -64,7 +61,7 @@ public:
     negativeBitRed {},  negativeBitGreen {},    negativeBitBlue {};
 
 private:
-  unsigned short checkRangeBg(const unsigned short c) const
+  unsigned short checkRangeBg(const int c) const
   {
     if(c < backgroundColorRangeMin || c > backgroundColorRangeMax)
       {
@@ -74,10 +71,10 @@ private:
 		 <<backgroundColorRangeMax<<"].\n";
 	exit(error_values::COLOR_RANGE);
       }
-    return c;
+    return (unsigned short)(c);
   }
 
-  unsigned short checkRange(const unsigned short c) const
+  unsigned short checkRange(const int c) const
   {
     if(c < colorRangeMin || c > colorRangeMax)
       {
@@ -86,49 +83,50 @@ private:
 	  " range is ["<<colorRangeMin<<","<<colorRangeMax<<"].\n";
 	exit(error_values::COLOR_RANGE);
       }
-    return c;
+    return (unsigned short)(c);
   }
 
 public:
-  Color(const unsigned short a,
-        const unsigned short bGR,       const unsigned short bGG,
-	const unsigned short bGB,	const unsigned short tR,
-	const unsigned short tG,        const unsigned short tB,
-        const unsigned short pBR,       const unsigned short pBG,
-	const unsigned short pBB,	const unsigned short nBR,
-	const unsigned short nBG,       const unsigned short nBB) :
+  Color(const int a,
+        const int bgR,	const int bgG,	const int bgB,
+	const int tR,	const int tG,	const int tB,
+        const int pbR,	const int pbG,	const int pbB,
+	const int nbR,	const int nbG,	const int nbB) :
     // alpha byte (msb) + red byte  + green byte + blue byte = 4 bytes
     backgroundColor ((checkRangeBg(a)<<backgroundCompSize<<backgroundCompSize
 		      <<backgroundCompSize) +
-		     (checkRangeBg(bGR)<<backgroundCompSize<<backgroundCompSize)
-		     + (checkRangeBg(bGG)<<backgroundCompSize)
-		     + (checkRangeBg(bGB))),
+		     (checkRangeBg(bgR)<<backgroundCompSize<<backgroundCompSize)
+		     + (checkRangeBg(bgG)<<backgroundCompSize)
+		     + (checkRangeBg(bgB))),
     alpha (a),
-    backgroundRed (checkRangeBg(bGR)),	backgroundGreen (checkRangeBg(bGG)),
-    backgroundBlue (checkRangeBg(bGB)),	textRed (checkRange(tR)),
+    backgroundRed (checkRangeBg(bgR)),	backgroundGreen (checkRangeBg(bgG)),
+    backgroundBlue (checkRangeBg(bgB)),	textRed (checkRange(tR)),
     textGreen (checkRange(tG)),		textBlue (checkRange(tB)),
-    positiveBitRed (checkRange(pBR)),	positiveBitGreen (checkRange(pBG)),
-    positiveBitBlue (checkRange(pBB)),	negativeBitRed (checkRange(nBR)),
-    negativeBitGreen (checkRange(nBG)),	negativeBitBlue (checkRange(nBB))
+    positiveBitRed (checkRange(pbR)),	positiveBitGreen (checkRange(pbG)),
+    positiveBitBlue (checkRange(pbB)),	negativeBitRed (checkRange(nbR)),
+    negativeBitGreen (checkRange(nbG)),	negativeBitBlue (checkRange(nbB))
   {}
 
-  // Initbackground() should be called before XCreateWindow().
+  /* These init functions are required because we don't do this in the
+     constructor as this class is somtimes used just for the purpose of storing
+     color values and not actually setting them */
+  // Sets background color, should be called before XCreateWindow().
   void initBackground(XSetWindowAttributes * attr) const
   {
     attr->background_pixel = backgroundColor;
-    std::cout<<"backgroundColor = "<<std::bitset<32>(backgroundColor)<<std::endl;
   }
 
   // Init() should be called after XCreateWindow().
-  void init(Display * display, Colormap cmap)//, XSetWindowAttributes attr)
-  { /* We don't do this in the constructor because this class is somtimes just
-       used to store the integer values and not for setting the actual color. */
+  void init(Display * display, GC gc, Colormap cmap)//, XSetWindowAttributes attr)
+  {
     text.red = textRed;		text.green = textGreen;
     text.blue = textBlue;
     positiveBit.red = positiveBitRed;	positiveBit.green = positiveBitGreen;
     positiveBit.blue = positiveBitBlue;
     negativeBit.red = negativeBitRed;	negativeBit.green = negativeBitGreen;
     negativeBit.blue = negativeBitBlue;
+    negativeBit.flags = DoRed | DoGreen;
+    negativeBit.flags &= !DoBlue;
     XAllocColor(display, cmap, & text);
     XAllocColor(display, cmap, & positiveBit);
     XAllocColor(display, cmap, & negativeBit);

@@ -248,20 +248,6 @@ bool getConfigurableParameters(const char * configPath,
 void mainLoop(Color & color, const bool usingConfig, const char * configPath,
 	      context & con, const int winHeight)
 {
-  /*  context con;
-      int winHeight {calcWinHeight()};
-      if(init(winX, winY, color, usingConfig, configPath, con, winHeight))
-      {
-      time_t currentTime;
-      while(true)
-      {
-      time(&currentTime);	// Get current time
-      display(con, color, currentTime, winHeight);
-      std::this_thread::sleep_for(std::chrono::milliseconds(250));
-      }
-      }	  
-      XCloseDisplay(con.display);*/
-  std::cout<<std::bitset<32>(con.attribs.background_pixel)<<std::endl;
   time_t currentTime;
   while(true)
     {
@@ -341,10 +327,8 @@ bool init(const int winX, const int winY, Color & color,
 	{
 	  ret = true;
 
-	  //con.attribs.background_pixel = 0xffff0000;
-	  color.initBackground(&con.attribs);
-	  
-	  con.attribs.override_redirect = 1;//non bordered / decorated window.
+	  color.initBackground(&con.attribs);	  
+	  con.attribs.override_redirect = 1; //non bordered / decorated window.
 	  /*	  con.window = XCreateWindow(con.display, RootWindow(con.display, 0),
 				     winX, winY, winWidth, winHeight,
 				     winBoarder_width, con.vinfo.depth,
@@ -367,7 +351,7 @@ bool init(const int winX, const int winY, Color & color,
 	  
 	  con.cmap = DefaultColormap(con.display, DefaultScreen(con.display));
 
-	  color.init(con.display, con.cmap);//, con.attribs);
+	  color.init(con.display, con.gc, con.cmap);//, con.attribs);
 
 	  /*
 	    unsigned char r {0xff}, g {0x00}, b {0x09};
