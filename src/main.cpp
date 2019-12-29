@@ -36,6 +36,14 @@ inline void drawBits(const context & con, Color & color,
 		     const int winHeight);
 
 
+namespace cliArity
+  {
+   constexpr int cliCoordsArgcNum {16};
+   // Number of args when no auxiliary args have been passed to the program
+   constexpr int cliNoArgs {1};
+  }
+
+
 /* FEATURES TO ADD! -- FEATURES TO ADD! -- FEATURES TO ADD! */
 /* Feature to add! have program take extra argument when it run's it's self so
    that it will give a correct error message for out of range coordinates
@@ -57,20 +65,16 @@ int main(int argc, char * argv[])
      positive bit blue value,
      negative bit red value,	negative bit green value,
      negative bit blue value */
-  constexpr int cliCoordsArgcNum {16};
-  // Number of args when no auxiliary args have been passed to the program
-  constexpr int cliNoArgs {1};
   // Did coordinates come from the CLI or configeration file?
-  //  bool coordsFromCli {false};
   const char * homeDir {getenv("HOME")}; // Get home directory
   std::stringstream configPath {};
   configPath<<homeDir<<"/.config/binClock.conf";
   bool usingConfig {false};
   
-  if(argc != cliCoordsArgcNum)
+  if(argc != cliArity::cliCoordsArgcNum)
     {
-      if(argc == cliNoArgs)
-	{ /* Our coordinates are comming from configPath (and their may be more
+      if(argc == cliArity::cliNoArgs)
+	{ /* Our arguments are comming from configPath (and there may be more
 	     then one pair!) */
 	  std::vector<int> coords {};
 	  usingConfig = true;
@@ -174,23 +178,56 @@ bool getConfigurableParameters(const char * configPath,
     {
       constexpr char subCoordSpacer {','}, interCoordSpacer {':'}, endChar {';'};
       char skip {}, end {};
-      int x {}, y {};
       bool more {true};
       std::stringstream errorMsg {};
+      int x {}, y {};
+      int bgAlpha {}, bgRed {}, bgGreen {}, bgBlue {};
+      int textRed {}, textGreen {}, textBlue {};
+      int positiveBitRed {}, positiveBitGreen {}, positiveBitBlue {};
+      int negativeBitRed {}, negativeBitGreen {}, negativeBitBlue {};
       errorMsg<<"The configuration file \""<<configPath<<"\" is malformed!\n"
 	"Usage:\t\"x1,y1:x2,y2: ... ;\".\nWhere x & y are the coordinates of "
 	"the top left corner of the window/s, '"<<subCoordSpacer<<"' act's as "
 	"the sub-field seperator, '"<<interCoordSpacer<<"' acts as the "
-	"inter-field seperator and the fact that there can be effectively any "
+	"int.er-field seperator and the fact that there can be effectively any "
 	"number of coordinates (but there must be at least one) is denoted by "
 	"the ellipsis after the second field (\"x2,y2\"). Finally the last "
 	"field must be followed by '"<<endChar<<"'.\n";
       
       while(more)
 	{
-	  in>>x>>skip>>y>>end;
+	  in>>x>>skip>>y>>skip>>bgAlpha>>skip>>bgRed>>skip>>bgGreen>>skip>>bgBlue>>
+	    skip>>textRed>>skip>>textGreen>>skip>>textBlue>>skip>>
+	    positiveBitRed>>skip>>positiveBitGreen>>skip>>positiveBitBlue>>skip>>
+	    negativeBitRed>>skip>>negativeBitGreen>>skip>>negativeBitBlue>>end;
+
+	  std::cout<<"\nskip = "<<skip<<",\tx = "<<x<<",\ny = "<<y<<", bgAlpha = "
+		   <<bgAlpha<<",\tbgRed = "<<bgRed<<",\nbgGreen = "<<bgGreen
+		   <<",\tbgBlue "<<bgBlue<<",\ntextRed = "<<textRed
+		   <<",\ttextGreen = "<<textGreen<<",\ntextBlue = "<<textBlue
+		   <<",\tpositiveBitRed = "<<positiveBitRed
+		   <<",\npositiveBitGreen = "<<positiveBitGreen
+		   <<",\tpositiveBitBlue = "<<positiveBitBlue
+		   <<",\nnegativeBitRed = "<<negativeBitRed
+		   <<",\tnegativeBitGreen = "<<negativeBitGreen
+		   <<",\nnegativeBitBlue = "<<negativeBitBlue<<",  end = "<<end
+		   <<"\n\n";
+	  
 	  coords.push_back(x);
 	  coords.push_back(y);
+	  coords.push_back(bgAlpha);
+	  coords.push_back(bgRed);
+	  coords.push_back(bgGreen);
+	  coords.push_back(bgBlue);
+	  coords.push_back(textRed);
+	  coords.push_back(textGreen);
+	  coords.push_back(textBlue);
+	  coords.push_back(positiveBitRed);
+	  coords.push_back(positiveBitGreen);
+	  coords.push_back(positiveBitBlue);
+	  coords.push_back(negativeBitRed);
+	  coords.push_back(negativeBitGreen);
+	  coords.push_back(negativeBitBlue);
 	  
 	  if(skip != subCoordSpacer)
 	    {
@@ -205,14 +242,11 @@ bool getConfigurableParameters(const char * configPath,
 		{	// We should be at the end and have an endChar
 		  if(end == endChar)
 		    {
-		      constexpr int minCoordsNum {2};
-		      if(coords.size() < minCoordsNum || coords.size() % 2 != 0)
-			{	/* We don't think this point will ever be
-				   reached. However we am not going to remove it
-				   right now. */
-			  std::cerr<<"Error: number of coordinates read in less"
-			    " then "<<minCoordsNum<<" or not even! "
-				   <<errorMsg.str();
+		      constexpr int argArity {cliArity::cliCoordsArgcNum -1};
+		      if(coords.size() % argArity != 0)
+			{
+			  std::cerr<<"Error: number of arguments read in not a "
+			    "multiple of"<<argArity<<"!\n"<<errorMsg.str();
 			  ret = false;
 			}
 		      more = false;
@@ -227,8 +261,8 @@ bool getConfigurableParameters(const char * configPath,
 		}
 	    }
 	  /* Reset in case there are not enough characters to read in on the
-	     next iteration */
-	  skip = 0, end = 0, x = 0, y = 0;
+	     next iteration. */
+	  skip = 0, end = 0;
 	}
 
       in.close();
