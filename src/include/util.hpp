@@ -63,7 +63,7 @@ public:
 private:
   unsigned short checkRangeBg(const int c) const
   {
-    if(c < backgroundColorRangeMin || c > backgroundColorRangeMax)
+    if(c < int(backgroundColorRangeMin) || c > int(backgroundColorRangeMax))
       {
 	std::cerr<<"Error: in checkRangeBg - called from Color(), supplied "
 	  "background color or alpha value ("<<c<<") is out of range! Where "
@@ -76,7 +76,7 @@ private:
 
   unsigned short checkRange(const int c) const
   {
-    if(c < colorRangeMin || c > colorRangeMax)
+    if(c < (int)colorRangeMin || c > (int)colorRangeMax)
       {
 	std::cerr<<"Error: in checkRange - called from Color(), supplied color "
 	  "value ("<<c<<") is out of range! Where"
@@ -117,7 +117,7 @@ public:
   }
 
   // Init() should be called after XCreateWindow().
-  void init(Display * display, GC gc, Colormap cmap)//, XSetWindowAttributes attr)
+  void init(Display * display, Colormap cmap)//, XSetWindowAttributes attr)
   {
     text.red = textRed;		text.green = textGreen;
     text.blue = textBlue;

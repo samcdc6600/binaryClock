@@ -18,11 +18,10 @@ bool getConfigurableParameters(const char * configPath,
 int calcWinHeight();
 bool init(const int winX, const int winY, Color & color, const bool usingConfig,
 	  const char * configPath, context & con, const int & winHeight);
-void mainLoop(Color & color, const bool usingConfig, const char * configPath,
-	      context & con, const int winHeight);
-inline void display(context & con, Color & color, const time_t time,
+void mainLoop(Color & color, const context & con, const int winHeight);
+inline void display(const context & con, Color & color, const time_t time,
 		    const int winHeight);
-inline void draw(context & con, Color & color, const time_t time,
+inline void draw(const context & con, Color & color, const time_t time,
 		 const int winHeight);
 inline void extractField(std::stringstream & date, std::stringstream & dateTime,
 			 const bool isStart, int count, const bool divider);
@@ -32,7 +31,7 @@ inline void strNumPosToInt(const std::string & time, int & number,
 			   const int magnitude, const int iter);
 inline void getBits(const int numBits, const int number,
 		    std::vector<bool> & ret);
-inline void drawBits(context & con, Color & color,
+inline void drawBits(const context & con, Color & color,
 		     const std::vector<bool> & bits, const int column,
 		     const int winHeight);
 
@@ -75,7 +74,7 @@ int main(int argc, char * argv[])
 	     then one pair!) */
 	  std::vector<int> coords {};
 	  usingConfig = true;
-	  
+
 	  if(getConfigurableParameters(configPath.str().c_str(), coords))
 	    {
 	      constexpr int firstY {1};
@@ -143,8 +142,7 @@ int main(int argc, char * argv[])
 	      con, winHeight))
 	{
 	  std::cout<<"We have initialised !\n";
-	  mainLoop(color, usingConfig, configPath.str().c_str(), con,
-		   winHeight);
+	  mainLoop(color, con, winHeight);
 	}	  
       XCloseDisplay(con.display);
     }
@@ -245,8 +243,7 @@ bool getConfigurableParameters(const char * configPath,
 }
 
 
-void mainLoop(Color & color, const bool usingConfig, const char * configPath,
-	      context & con, const int winHeight)
+void mainLoop(Color & color, const context & con, const int winHeight)
 {
   time_t currentTime;
   while(true)
@@ -329,12 +326,6 @@ bool init(const int winX, const int winY, Color & color,
 
 	  color.initBackground(&con.attribs);	  
 	  con.attribs.override_redirect = 1; //non bordered / decorated window.
-	  /*	  con.window = XCreateWindow(con.display, RootWindow(con.display, 0),
-				     winX, winY, winWidth, winHeight,
-				     winBoarder_width, con.vinfo.depth,
-				     InputOutput, con.vinfo.visual, CWColormap
-				     | CWBorderPixel | CWBackPixel |
-				     CWOverrideRedirect, &con.attribs);*/
 	  con.window = XCreateWindow(con.display, RootWindow(con.display, 0),
 				     winX, winY, winWidth, winHeight,
 				     winBoarder_width, con.vinfo.depth,
@@ -351,34 +342,14 @@ bool init(const int winX, const int winY, Color & color,
 	  
 	  con.cmap = DefaultColormap(con.display, DefaultScreen(con.display));
 
-	  color.init(con.display, con.gc, con.cmap);//, con.attribs);
-
-	  /*
-	    unsigned char r {0xff}, g {0x00}, b {0x09};
-	    unsigned int bgColor {};
-	    unsigned char alpha {0xff};
-	    bgColor = alpha;
-	    std::cout<<"    bgColor = alpha; = "<<std::bitset<32>(bgColor)<<std::endl;
-	    bgColor<<=8;
-	    std::cout<<"    bgColor<<=2; = "<<std::bitset<32>(bgColor)<<std::endl;
-	    bgColor += r;
-	    std::cout<<"    bgColor += r; = "<<std::bitset<32>(bgColor)<<std::endl;
-	    bgColor<<=8;
-	    std::cout<<"    bgColor<<=2; = "<<std::bitset<32>(bgColor)<<std::endl;
-	    bgColor += g;
-	    std::cout<<"    bgColor += g; = "<<std::bitset<32>(bgColor)<<std::endl;
-	    bgColor<<=8;
-	    std::cout<<"    bgColor<<=2; = "<<std::bitset<32>(bgColor)<<std::endl;
-	    bgColor += b;
-	    std::cout<<"    bgColor += b; = "<<std::bitset<32>(bgColor)<<std::endl;
-	    con.attribs.background_pixel = bgColor;*/
+	  color.init(con.display, con.cmap);//, con.attribs);
 	}
     }
   return ret;
 }
 
 
-inline void display(context & con, Color & color, const time_t time,
+inline void display(const context & con, Color & color, const time_t time,
 		    const int winHeight)
 {
   draw(con, color, time, winHeight);
@@ -386,7 +357,7 @@ inline void display(context & con, Color & color, const time_t time,
 }
 
 
-inline void draw(context & con, Color & color, const time_t time,
+inline void draw(const context & con, Color & color, const time_t time,
 		 const int winHeight)
 {
   using namespace tunables;
@@ -474,7 +445,7 @@ inline void getBits(const int numBits, const int number,
 }
 
 
-inline void drawBits(context & con, Color & color,
+inline void drawBits(const context & con, Color & color,
 		     const std::vector<bool> & bits, const int column,
 		     const int winHeight)
 {

@@ -1,0 +1,7 @@
+We get permission denied when running the script
+"set_HOME_for_config_testing.sh" with "dot space" syntax. We think this has
+something to do with tcsh based what we have read online.
+
+One should run the command found in the aformentioned script to change the HOME
+shell variable. Doing this will direct our clock to the file
+".config/binClock.conf". This way we can use a test script.
